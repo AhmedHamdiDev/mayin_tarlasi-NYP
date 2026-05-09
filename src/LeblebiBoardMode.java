@@ -62,6 +62,7 @@ public class LeblebiBoardMode {
 
     private String               aktifDiyalog      = null;
     private DiyalogTetikleyici   aktifTetikleyici  = null;
+    
 
     private final Board tahta;
     private final int   baslangicSuresi;
@@ -77,7 +78,7 @@ public class LeblebiBoardMode {
     // Kalıcı eşya kullanımları (Seviye hesabı için)
     private int     kargaKullanimToplami;
     private int     ilacKullanimToplami;
-
+    private int harcananAltin;
     // Görev Sistemi
     public enum GorevTipi { HIZLI_BITIR, KARGA_YOK, COKLU_HUCRE, YILAN_AVCISI }
     public static class Gorev {
@@ -126,6 +127,7 @@ public class LeblebiBoardMode {
         this.altin           = baslangicAltin;
         this.kargaKullanimToplami = toplamKargaKullanim;
         this.ilacKullanimToplami  = toplamIlacKullanim;
+        this.harcananAltin = 0;
         this.oyunBitti       = false;
         this.kazanildi       = false;
         
@@ -234,12 +236,13 @@ public class LeblebiBoardMode {
     // ── Altın Sistemi ────────────────────────────────────────────────────────
 
     public void altinEkle(int miktar) {
-        altin += miktar;
+        this.altin += miktar;
     }
 
     public boolean altinHarca(int miktar) {
         if (altin >= miktar) {
-            altin -= miktar;
+            this.altin -= miktar;
+            this.harcananAltin += miktar;
             return true;
         }
         return false;
@@ -247,6 +250,10 @@ public class LeblebiBoardMode {
 
     public int getAltin() {
         return altin;
+    }
+
+    public int getHarcananAltin(){
+        return harcananAltin;
     }
 
     // ── Puan sistemi ─────────────────────────────────────────────────────────
@@ -265,9 +272,9 @@ public class LeblebiBoardMode {
 
         altinIlerlemeSayaci += miktar;
 
-        while (altinIlerlemeSayaci >= 4) {
+        while (altinIlerlemeSayaci >= 2) {
             altinEkle(1);
-            altinIlerlemeSayaci -= 4;
+            altinIlerlemeSayaci -= 2;
         }
     }
 
@@ -293,6 +300,7 @@ public class LeblebiBoardMode {
         java.util.List<int[]> konumlar = tahta.kargaGorus(getKargaLevel(), sonTiklananSatir, sonTiklananSutun);
         if (konumlar == null || konumlar.isEmpty()) {
             altinEkle(20); // mayın yoksa iade
+            harcananAltin -= 20;
             return null;
         }
         kargaGosterilenMayinlar.addAll(konumlar);

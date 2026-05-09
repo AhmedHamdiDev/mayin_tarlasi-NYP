@@ -292,10 +292,15 @@ public class Board {
         komsuMayinlariHesapla();
 
         // 3. Open all cells in the area via Board.ac()
+        //    Flagged cells are unflagged first so the pesticide clears them too —
+        //    a player who flagged a snake should see it destroyed along with the rest.
         for (int[] pos : etkiAlani) {
             int ys = pos[0], yu = pos[1];
-            if (sinirIcindeMi(ys, yu))
+            if (sinirIcindeMi(ys, yu)) {
+                Cell c = izgara[ys][yu];
+                if (c.isIsaretlendi()) c.isaretiDegistir(); // remove flag before opening
                 ac(ys, yu, true);
+            }
         }
 
         return yokEdilenSolucan;

@@ -137,13 +137,6 @@ public class MinesweeperApp extends Application {
     private HBox  canIkonKutusu;
     private VBox  gorevPanel;
 
-    // Gece modu
-    private javafx.scene.canvas.Canvas geceKanvasi;
-    private double fenerX = -1000, fenerY = -1000;
-    private double fenerBaseYaricap = 165;
-    private double fenerPulseOffset = 0;
-    private Timeline nefesAnimasyonu;
-
     // Konuşma balonu
     private StackPane konusmaBalonuPanel;
     private Label     konusmaBalonuLabel;
@@ -166,11 +159,13 @@ public class MinesweeperApp extends Application {
     private static final String ASSET_LEBLEBI= "assets/leblebi.png";
     private static final String ASSET_BAYRAK = "assets/bayrak.png";
     private static final String ASSET_MAYIN  = "assets/mayin.png";
+    private static final String ASSET_KALP   = "assets/kalp.png";
 
     private Image imgYilan;
     private Image imgLeblebi;
     private Image imgBayrak;
     private Image imgMayin;
+    private Image imgKalp;
 
     private static final String FONT_YOL = "assets/fonts/GameFont.ttf";
 
@@ -190,14 +185,12 @@ public class MinesweeperApp extends Application {
         pencere.setResizable(true);
         pencere.centerOnScreen();
         pencere.show();
-        menuGoster();
-
-        Thread yukleyici = new Thread(() -> {
-            sesFxYukle();
-            assetleriOnYukle();
+        Thread yukleyici = new Thread(()->{
+                assetleriOnYukle();
+                sesFxYukle();
         }, "asset-loader");
-        yukleyici.setDaemon(true);
         yukleyici.start();
+        menuGoster();
     }
 
     // =========================================================================
@@ -217,13 +210,14 @@ public class MinesweeperApp extends Application {
         imgLeblebi = assetImgYukle(ASSET_LEBLEBI, 20);
         imgBayrak  = assetImgYukle(ASSET_BAYRAK,  18);
         imgMayin   = assetImgYukle(ASSET_MAYIN,   20);
+        imgKalp    = assetImgYukle(ASSET_KALP,    20);
     }
 
     private Image assetImgYukle(String yol, double boyut) {
         try {
             java.net.URL url = getClass().getResource(yol);
-            if (url == null) url = new java.io.File(yol).toURI().toURL();
-            return new Image(url.toString(), boyut, boyut, true, true);
+            if (url == null) url = java.nio.file.Paths.get(yol).toAbsolutePath().toUri().toURL();
+            return new Image(url.toString(), boyut, boyut, true, false, true);
         } catch (Exception e) { return null; }
     }
 
@@ -280,7 +274,6 @@ public class MinesweeperApp extends Application {
             leblebModu = true; satranModu = false;
             mevcutSeviye = 1; toplamLeblebPuani = 0; kaliciAltin = 0;
             toplamKargaKullanim = 0; toplamIlacKullanim = 0;
-            fenerBaseYaricap = 165;
             leblebOyunuBaslat();
         });
         HBox ustSira = new HBox(20, klasikBtn, satranBtn, leblebBtn);
@@ -740,10 +733,7 @@ public class MinesweeperApp extends Application {
         sutunSayisi = seviye.getSutunSayisi();
         mayinSayisi = seviye.getSolucanSayisi();
         klasikBoardMode = null; chessBoardMode = null;
-        leblebiBoardMode = new LeblebiBoardMode(
-                satirSayisi, sutunSayisi, mayinSayisi,
-                seviye.getSureSaniye(), KLASIK_CAN,
-                kaliciAltin, toplamKargaKullanim, toplamIlacKullanim);
+        leblebiBoardMode = new LeblebiBoardMode(satirSayisi, sutunSayisi, mayinSayisi, seviye.getSureSaniye(), KLASIK_CAN, kaliciAltin, toplamKargaKullanim, toplamIlacKullanim);
         oyunSahnesiniBaSlat(true, false);
         leblebiBoardMode.diyalogTetikle(LeblebiBoardMode.DiyalogTetikleyici.LEVEL_BASI);
         javafx.application.Platform.runLater(() -> diyalogGoster(leblebiBoardMode.getAktifDiyalog()));
@@ -921,7 +911,8 @@ public class MinesweeperApp extends Application {
         if (leblebModu && leblebiBoardMode != null) {
             zamanlayiciEtiketi.setText("⏳ " + leblebiBoardMode.getKalanSure() + "s");
             canEtiketi.setText(""); canEtiketi.setVisible(false); canEtiketi.setManaged(false);
-            puanEtiketi.setText("🫘 " + leblebiBoardMode.getLeblebPuani() + " puan");
+            puanEtiketi.setText("🏆 " + leblebiBoardMode.getLeblebPuani() + " puan");
+            altinEtiketi.setText("💰 " + leblebiBoardMode.getAltin() + " altın"); // FIX 5: başlangıçta da göster
         } else if (klasikBoardMode != null && klasikBoardMode.isGeriSayim()) {
             zamanlayiciEtiketi.setText("⏳ " + klasikBoardMode.getSuruclukSure() + "s");
             zamanlayiciEtiketi.setStyle("-fx-font-size: 19px; -fx-font-weight: bold; -fx-padding: 4 12 4 12;-fx-background-radius: 8; -fx-text-fill: #cdd6f4;");
@@ -1010,28 +1001,6 @@ public class MinesweeperApp extends Application {
         VBox.setVgrow(merkez, Priority.ALWAYS);
         kokDuzen.setCenter(merkez);
 
-        boolean geceModu = leblebModu && (mevcutSeviye % 4 == 3);
-        if (geceModu) {
-            geceKanvasi = new javafx.scene.canvas.Canvas();
-            geceKanvasi.setMouseTransparent(true);
-            geceKanvasi.widthProperty().bind(merkez.widthProperty());
-            geceKanvasi.heightProperty().bind(merkez.heightProperty());
-            merkez.getChildren().add(geceKanvasi);
-
-            merkez.setOnMouseMoved(e -> { fenerX = e.getX(); fenerY = e.getY(); geceKanvasiniCiz(); });
-            merkez.setOnMouseExited(e -> { fenerX = -1000; fenerY = -1000; geceKanvasiniCiz(); });
-
-            nefesAnimasyonu = new Timeline(
-                    new KeyFrame(Duration.ZERO, new KeyValue(this.fenerPulseOffsetProperty(), 0)),
-                    new KeyFrame(Duration.seconds(2), new KeyValue(this.fenerPulseOffsetProperty(), 30)));
-            nefesAnimasyonu.setAutoReverse(true);
-            nefesAnimasyonu.setCycleCount(Animation.INDEFINITE);
-            nefesAnimasyonu.play();
-
-            geceKanvasi.widthProperty().addListener(o -> geceKanvasiniCiz());
-            geceKanvasi.heightProperty().addListener(o -> geceKanvasiniCiz());
-        }
-
         if (leblebModu && leblebiBoardMode != null) canSayisiGuncelle(leblebiBoardMode.getCanSayisi());
     }
 
@@ -1041,38 +1010,6 @@ public class MinesweeperApp extends Application {
         return t != null ? t.getHucre(s, u) : new Cell();
     }
 
-    private javafx.beans.property.DoubleProperty fenerPulseOffsetProp;
-    private javafx.beans.property.DoubleProperty fenerPulseOffsetProperty() {
-        if (fenerPulseOffsetProp == null) {
-            fenerPulseOffsetProp = new javafx.beans.property.SimpleDoubleProperty(this, "fenerPulseOffset", fenerPulseOffset) {
-                @Override protected void invalidated() { fenerPulseOffset = get(); geceKanvasiniCiz(); }
-            };
-        }
-        return fenerPulseOffsetProp;
-    }
-
-    private void geceKanvasiniCiz() {
-        if (geceKanvasi == null) return;
-        double w = geceKanvasi.getWidth(), h = geceKanvasi.getHeight();
-        if (w <= 0 || h <= 0) return;
-        javafx.scene.canvas.GraphicsContext gc = geceKanvasi.getGraphicsContext2D();
-        gc.clearRect(0, 0, w, h);
-        boolean mouseOnBoard = fenerX >= 0 && fenerY >= 0 && (leblebiBoardMode != null && !leblebiBoardMode.isOyunBitti());
-        double ambientAlpha = mouseOnBoard ? 0.82 : 0.50;
-        gc.setFill(javafx.scene.paint.Color.rgb(10, 10, 15, ambientAlpha));
-        gc.fillRect(0, 0, w, h);
-        if (mouseOnBoard) {
-            double r = fenerBaseYaricap + fenerPulseOffset;
-            javafx.scene.paint.RadialGradient rg = new javafx.scene.paint.RadialGradient(
-                    0, 0, fenerX, fenerY, r, false, javafx.scene.paint.CycleMethod.NO_CYCLE,
-                    new javafx.scene.paint.Stop(0.00, javafx.scene.paint.Color.TRANSPARENT),
-                    new javafx.scene.paint.Stop(0.70, javafx.scene.paint.Color.rgb(10, 10, 15, 0.20)),
-                    new javafx.scene.paint.Stop(1.00, javafx.scene.paint.Color.rgb(10, 10, 15, 0.82)));
-            gc.setGlobalBlendMode(javafx.scene.effect.BlendMode.SRC_ATOP);
-            gc.setFill(rg); gc.fillOval(fenerX - r, fenerY - r, r * 2, r * 2);
-            gc.setGlobalBlendMode(javafx.scene.effect.BlendMode.SRC_OVER);
-        }
-    }
 
     // ── Market panel ──────────────────────────────────────────────────────────
 
@@ -1135,27 +1072,11 @@ public class MinesweeperApp extends Application {
             } else { diyalogGoster("Can almak o kadar ucuz değil, 100 altın ister."); }
         });
 
-        boolean geceModu = (mevcutSeviye % 4 == 3);
-        Button fenerBtn = null;
-        if (geceModu) {
-            fenerBtn = marketKartButonOlustur("🎕", "Fener Genışlet", "15 💰");
-            fenerBtn.setId("fenerBtn");
-            fenerBtn.setOnAction(o -> {
-                if (leblebiBoardMode != null && leblebiBoardMode.altinHarca(15)) {
-                    fenerBaseYaricap = Math.min(350, fenerBaseYaricap + 40);
-                    geceKanvasiniCiz();
-                    altinEtiketi.setText("💰 " + leblebiBoardMode.getAltin() + " altın");
-                    marketPanelGuncelle();
-                    diyalogGoster("Fırlıyalım feneri, tarlayı aydınlatalım!");
-                } else { diyalogGoster("Fener için 15 altın gerekli evladım."); }
-            });
-        }
 
         GridPane kartlar = new GridPane();
         kartlar.setHgap(8); kartlar.setVgap(8);
         kartlar.add(kargaBtn, 0, 0); kartlar.add(saatBtn, 1, 0);
         kartlar.add(ilacBtn,  0, 1); kartlar.add(kalpBtn, 1, 1);
-        if (fenerBtn != null) { kartlar.add(fenerBtn, 0, 2); GridPane.setColumnSpan(fenerBtn, 2); }
         GridPane.setHgrow(kargaBtn, Priority.ALWAYS); GridPane.setHgrow(saatBtn, Priority.ALWAYS);
         GridPane.setHgrow(ilacBtn,  Priority.ALWAYS); GridPane.setHgrow(kalpBtn, Priority.ALWAYS);
 
@@ -1280,21 +1201,14 @@ public class MinesweeperApp extends Application {
         // ── Leblebi Modu ──────────────────────────────────────────────────────
         if (leblebModu && leblebiBoardMode != null) {
             if (leblebiBoardMode.isZirayiIlacAktif()) {
-                Board tahta = leblebiBoardMode.getTahta();
-                int oncekiAcik = acikHucreSay(tahta);
+                // FIX 1: Puan callback (onSafeCellOpened) ile zaten eklendi; hucrePuaniEkle tekrar çağrılmıyor
                 leblebiBoardMode.hucreAc(s, u);
-                int kazanilanPuan = acikHucreSay(tahta) - oncekiAcik;
-                if (kazanilanPuan > 0) {
-                    leblebiBoardMode.hucrePuaniEkle(kazanilanPuan);
-                    puanEtiketi.setText("🏆 " + leblebiBoardMode.getLeblebPuani() + " puan");
-                    altinEtiketi.setText("💰 " + leblebiBoardMode.getAltin() + " altın");
-                }
+                puanEtiketi.setText("🏆 " + leblebiBoardMode.getLeblebPuani() + " puan");
+                altinEtiketi.setText("💰 " + leblebiBoardMode.getAltin() + " altın");
                 leblebiBoardMode.kazanmaKontrol();
                 sesCal(sesKazma);
                 return;
             }
-            Board tahta = leblebiBoardMode.getTahta();
-            int oncekiAcik = acikHucreSay(tahta);
             boolean mineHit = leblebiBoardMode.hucreAc(s, u);
             if (mineHit) {
                 sesCal(sesPatlama);
@@ -1302,17 +1216,18 @@ public class MinesweeperApp extends Application {
                 ekranSarsintisi();
                 if (merkezIcerikKutusu != null) kirmiziFlasBas(merkezIcerikKutusu);
                 canIkonunuKir(leblebiBoardMode.getCanSayisi());
-                leblebiBoardMode.diyalogTetikle(LeblebiBoardMode.DiyalogTetikleyici.CAN_KAYBI);
-                diyalogGoster(leblebiBoardMode.getAktifDiyalog());
+                // FIX 2: diyalog sadece yilanUyarisiGoster içinde tetikleniyor (iki kez değil)
                 if (!leblebiBoardMode.isOyunBitti()) { zamanlayici.pause(); yilanUyarisiGoster(s, u); }
+                else {
+                    // Oyun bitti (can=0): burada tetikle, yilanUyarisiGoster çağrılmıyor
+                    leblebiBoardMode.diyalogTetikle(LeblebiBoardMode.DiyalogTetikleyici.KAYBETME);
+                    diyalogGoster(leblebiBoardMode.getAktifDiyalog());
+                }
             } else {
                 sesCal(sesKazma);
-                int kazanilan = acikHucreSay(tahta) - oncekiAcik;
-                if (kazanilan > 0) {
-                    leblebiBoardMode.hucrePuaniEkle(kazanilan);
-                    puanEtiketi.setText("🏆 " + leblebiBoardMode.getLeblebPuani() + " puan");
-                    altinEtiketi.setText("💰 " + leblebiBoardMode.getAltin() + " altın");
-                }
+                // FIX 1: Puan callback (onSafeCellOpened) ile zaten eklendi; burada tekrar ekleme
+                puanEtiketi.setText("🏆 " + leblebiBoardMode.getLeblebPuani() + " puan");
+                altinEtiketi.setText("💰 " + leblebiBoardMode.getAltin() + " altın");
             }
             return;
         }
@@ -1454,6 +1369,7 @@ public class MinesweeperApp extends Application {
             chessBoardMode = new ChessBoardMode(chessBoardMode.getDifficulty(), chessBoardMode.getBaslangicSuresi());
             mayinSayisi = chessBoardMode.getMineCount();
         } else if (leblebModu) {
+            kaliciAltin = kaliciAltin>=leblebiBoardMode.getHarcananAltin() ? kaliciAltin-leblebiBoardMode.getHarcananAltin() : 0;
             leblebiBoardMode = new LeblebiBoardMode(satirSayisi, sutunSayisi, mayinSayisi,
                     Seviye.getSeviye(mevcutSeviye).getSureSaniye(), KLASIK_CAN,
                     kaliciAltin, toplamKargaKullanim, toplamIlacKullanim);
@@ -1480,6 +1396,19 @@ public class MinesweeperApp extends Application {
     // =========================================================================
     // UI update loop
     // =========================================================================
+
+    /** Returns an ImageView for the given loaded Image, or a fallback Label with emoji. */
+    private javafx.scene.Node imgGraphic(Image img, String fallbackEmoji, double size) {
+        if (img != null) {
+            ImageView iv = new ImageView(img);
+            iv.setFitWidth(size); iv.setFitHeight(size);
+            iv.setPreserveRatio(true); iv.setSmooth(true);
+            return iv;
+        }
+        Label lbl = new Label(fallbackEmoji);
+        lbl.setStyle("-fx-font-size:" + (int)size + "px;");
+        return lbl;
+    }
 
     private void arayuzuGuncelle() {
         if (dugmeler == null) return;
@@ -1528,9 +1457,10 @@ public class MinesweeperApp extends Application {
                 Button btn = dugmeler[s][u];
 
                 if (nyDurum == 3) {
-                    String mineEmoji = leblebModu ? "🐍" : "💣";
-                    Label mineL = new Label(mineEmoji); mineL.setStyle("-fx-font-size:20px;");
-                    btn.setText(""); btn.setGraphic(mineL); btn.setStyle(mayinHucreTarzi()); btn.setDisable(true);
+                    javafx.scene.Node mineG = leblebModu
+                        ? imgGraphic(null, "🐍", 20)
+                        : imgGraphic(imgMayin, "💣", 20);
+                    btn.setText(""); btn.setGraphic(mineG); btn.setStyle(mayinHucreTarzi()); btn.setDisable(true);
                 } else if (nyDurum >= 10) {
                     btn.setGraphic(null);
                     int k = hucre.getKomsuMayinSayisi();
@@ -1547,8 +1477,7 @@ public class MinesweeperApp extends Application {
                         altinLeblebiAnimasyonu(btn);
                     }
                 } else if (nyDurum == 1) {
-                    Label flagL = new Label("🚩"); flagL.setStyle("-fx-font-size:20px;");
-                    btn.setText(""); btn.setGraphic(flagL); btn.setStyle(isaretliHucreTarzi()); btn.setDisable(false);
+                    btn.setText(""); btn.setGraphic(imgGraphic(imgBayrak, "🚩", 20)); btn.setStyle(isaretliHucreTarzi()); btn.setDisable(false);
                 } else if (nyDurum == 4) {
                     btn.setGraphic(null); btn.setText("");
                     btn.setStyle(acilmamisHucreTarzi() + "-fx-border-color: " + LB_KARGA_RENK + "; -fx-border-width: 3;"); btn.setDisable(false);
@@ -1615,8 +1544,7 @@ public class MinesweeperApp extends Application {
                 ft.setFromValue(0.3); ft.setToValue(1.0); ft.play();
             }
         } else if (flagged) {
-            Label flag = new Label("🚩"); flag.setStyle("-fx-font-size: 20px;");
-            btn.setText(""); btn.setGraphic(flag);
+            btn.setText(""); btn.setGraphic(imgGraphic(imgBayrak, "🚩", 20));
             btn.setStyle("-fx-background-color: " + CH_ISARETLI + ";" +
                          "-fx-border-color: #8060a0; -fx-border-width: 1;" +
                          "-fx-background-radius: 4; -fx-border-radius: 4;");
@@ -2167,7 +2095,9 @@ public class MinesweeperApp extends Application {
     private void canSayisiGuncelle(int canSayisi) {
         if (canIkonKutusu == null) return;
         canIkonKutusu.getChildren().clear();
-        for (int i = 0; i < canSayisi; i++) { Label ikon = new Label("❤"); ikon.setStyle("-fx-font-size: 18px; -fx-text-fill: #ff6b6b;"); canIkonKutusu.getChildren().add(ikon); }
+        for (int i = 0; i < canSayisi; i++) {
+            canIkonKutusu.getChildren().add(imgGraphic(imgKalp, "❤", 20));
+        }
         if (kokDuzen != null && kokDuzen.getTop() instanceof HBox bar) {
             if (!bar.getChildren().contains(canIkonKutusu)) { int idx = bar.getChildren().indexOf(canEtiketi); if (idx >= 0) bar.getChildren().add(idx + 1, canIkonKutusu); else bar.getChildren().add(canIkonKutusu); }
         }
@@ -2217,6 +2147,7 @@ public class MinesweeperApp extends Application {
         for (int s = 0; s < satirSayisi; s++) for (int u = 0; u < sutunSayisi; u++) {
             Button btn = dugmeler[s][u]; if (btn == null || btn.isDisabled()) continue;
             Cell hh = tahta.getHucre(s, u); if (!hh.isAcildiMi() && !hh.isIsaretlendi()) btn.setStyle(acilmamisHucreTarzi());
+            else if (hh.isIsaretlendi()) btn.setStyle(isaretliHucreTarzi());
             btn.setCursor(javafx.scene.Cursor.DEFAULT);
         }
     }
