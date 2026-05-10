@@ -1,6 +1,7 @@
 import javafx.animation.*;
 import javafx.application.Application;
 import javafx.geometry.*;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.*;
 import javafx.scene.control.*;
 import javafx.scene.control.SpinnerValueFactory;
@@ -12,6 +13,7 @@ import javafx.scene.media.*;
 import javafx.scene.paint.*;
 import javafx.scene.shape.*;
 import javafx.stage.*;
+import javafx.stage.Screen;
 import javafx.util.Duration;
 
 import java.util.*;
@@ -32,24 +34,23 @@ public class MinesweeperApp extends Application {
     // ── Theme colours ─────────────────────────────────────────────────────────
     // Karanlık tema — Midnight Indigo
     private static final String KT_ARKAPLAN  = "#12111f";
-    private static final String KT_ACILMAMIS = "#3b3756";
-    private static final String KT_ACILMIS   = "#0a0918";
-    private static final String KT_ISARETLI  = "#4e3d7a";
-    private static final String KT_CERCEVE   = "#5a5478";
+    private static final String KT_ACILMAMIS = "#5c5b8a";
+    private static final String KT_ACILMIS   = "#1a192e";
+    private static final String KT_ISARETLI  = "#6a5acd";
+    private static final String KT_CERCEVE   = "#7b748a";
     private static final String KT_YAZI      = "#e2dcf8";
-    private static final String KT_YAZI_SOLUK= "#7b748a";
+    private static final String KT_YAZI_SOLUK= "#a099b0";
     private static final String KT_UST_BAR   = "#0e0d1c";
 
     // Açık tema — Soft Lavender
-    private static final String AT_ARKAPLAN  = "#eef0f8";
-    private static final String AT_ACILMAMIS = "#b8bcd8";
-    private static final String AT_ACILMIS   = "#f5f5fc";
-    private static final String AT_ISARETLI  = "#a8aed0";
-    private static final String AT_CERCEVE   = "#8890b0";
+    private static final String AT_ARKAPLAN  = "#e0e4f0";
+    private static final String AT_ACILMAMIS = "#7d86a1";
+    private static final String AT_ACILMIS   = "#fcfdff"; 
+    private static final String AT_ISARETLI  = "#7a82ab"; 
+    private static final String AT_CERCEVE   = "#5c647a";
     private static final String AT_YAZI      = "#1a1830";
-    private static final String AT_YAZI_SOLUK= "#8890b0";
-    private static final String AT_UST_BAR   = "#d4d8ee";
-
+    private static final String AT_YAZI_SOLUK= "#717892"; 
+    private static final String AT_UST_BAR   = "#cbd1e6"; 
     // Leblebi tema — Golden Harvest
     private static final String LB_ARKAPLAN  = "#2e1a00";
     private static final String LB_ACILMAMIS = "#c8922a";
@@ -184,6 +185,11 @@ public class MinesweeperApp extends Application {
         pencere.setMinHeight(500);
         pencere.setResizable(true);
         pencere.centerOnScreen();
+        Rectangle2D ekran = Screen.getPrimary().getVisualBounds();
+        pencere.setX(ekran.getMinX());
+        pencere.setY(ekran.getMinY());
+        pencere.setWidth(ekran.getWidth());
+        pencere.setHeight(ekran.getHeight());
         pencere.show();
         Thread yukleyici = new Thread(()->{
                 assetleriOnYukle();
@@ -495,13 +501,6 @@ public class MinesweeperApp extends Application {
         return btn;
     }
 
-    /** Eski imza korunuyor — geriye dönük uyumluluk için. Yeni kod yeniMenuButon() kullanır. */
-    private Button kareMenuButon(String ikon, String etiket, String vurguRenk, String yazıArka) {
-        String[] satirlar = etiket.split("\n");
-        String b = satirlar.length > 0 ? satirlar[0] : etiket;
-        String a = satirlar.length > 1 ? satirlar[1] : "";
-        return yeniMenuButon(ikon, b, a, vurguRenk, yazıArka);
-    }
 
     /** Easter egg tetiklendiğinde leblebi butonunu leblebi moduna çevirir. */
     private void easterEggTetikleYeni(javafx.scene.layout.Pane kok, Button leblebBtn, Label etiket) {
@@ -574,14 +573,16 @@ public class MinesweeperApp extends Application {
         panel.setPadding(new Insets(24)); panel.setStyle("-fx-background-color:" + arka + ";");
         Label baslik = new Label("Mayın Tarlası — Nasıl Oynanır?");
         baslik.setStyle("-fx-font-size:16px; -fx-font-weight:bold; -fx-text-fill:" + vurgu + ";");
-        String[][] kurallar = {
-            {"Sol Tık",   "Hücreyi açar."},
-            {"Sağ Tık",   "Bayrak diker / kaldırır."},
-            {"Sayılar",   "Komşu mayın / taş sayısını gösterir."},
-            {"Klasik",    "Tüm mayınsız kareleri açarak kazan."},
-            {"Satranç",   "Taşlar her hamlede hareket eder!"},
-            {"Leblebi",   "Can sistemi + market ile oyna (gizli mod)."},
-        };
+        List<String[]> kuralListesi = new ArrayList<String[]>();
+            kuralListesi.add(new String[] {"Sol Tık",   "Hücreyi açar."});
+            kuralListesi.add(new String[] {"Sağ Tık",   "Bayrak diker / kaldırır."});
+            kuralListesi.add(new String[] {"Sayılar",   "Komşu mayın / taş sayısını gösterir."});
+            kuralListesi.add(new String[] {"Klasik",    "Tüm mayınsız kareleri açarak kazan."});
+            kuralListesi.add(new String[] {"Satranç",   "Taşlar her hamlede hareket eder!"});
+        if (leblebAcildi) {
+            kuralListesi.add(new String[]{"Leblebi", "Can sistemi + market ile oyna (gizli mod)."});
+        }
+        String[][] kurallar = kuralListesi.toArray(new String[0][]);
         GridPane grid = new GridPane(); grid.setHgap(12); grid.setVgap(8);
         for (int i=0; i<kurallar.length; i++) {
             Label k = new Label(kurallar[i][0]); k.setStyle("-fx-font-size:13px; -fx-font-weight:bold; -fx-text-fill:" + vurgu + "; -fx-min-width:80;");
@@ -2212,7 +2213,8 @@ public class MinesweeperApp extends Application {
     private String acilmamisHucreHoverTarzi(int r, int c) {
         if (satranModu) return "-fx-background-color:#e8c84a;-fx-border-color:#c8a800;-fx-border-width:2;-fx-background-radius:4;-fx-border-radius:4;-fx-padding:0;-fx-cursor:hand;";
         if (leblebModu) return "-fx-background-color:#d9aa3a;-fx-border-color: #f0d070 #8a6510 #8a6510 #f0d070;-fx-border-width:2;-fx-background-radius:3;-fx-border-radius:3;-fx-padding:0;-fx-cursor:hand;";
-        String bg = karanlikTema ? "#524f70" : "#c8d0e8"; String br = karanlikTema ? KT_CERCEVE : AT_CERCEVE;
+        String bg = karanlikTema ? "#454366" : "#98a1ba";
+        String br = karanlikTema ? KT_CERCEVE : AT_CERCEVE;
         return "-fx-background-color:" + bg + ";-fx-border-color:" + br + ";-fx-border-width:1;-fx-background-radius:3;-fx-border-radius:3;-fx-padding:0;-fx-cursor:hand;";
     }
 
