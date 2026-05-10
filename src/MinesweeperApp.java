@@ -224,7 +224,7 @@ public class MinesweeperApp extends Application {
     private AudioClip sesFxYukleGuveli(String yol) {
         try {
             java.net.URL url = getClass().getResource(yol);
-            if (url == null) url = new java.io.File(yol).toURI().toURL();
+            if (url != null) url = new java.io.File(yol).toURI().toURL();
             return new AudioClip(url.toString());
         } catch (Exception e) { return null; }
     }
@@ -236,39 +236,102 @@ public class MinesweeperApp extends Application {
     // =========================================================================
 
     private void menuGoster() {
-        // ── Arka plan ve gradient ──────────────────────────────────────────────
-        VBox kok = new VBox(0);
-        kok.setAlignment(Pos.CENTER);
+        // ── Ana arka plan — koyu lacivert gradient ────────────────────────────
+        BorderPane kok = new BorderPane();
         kok.setStyle(
-            "-fx-background-color: linear-gradient(to bottom, #0a0918 0%, #12111f 60%, #0e0d1c 100%);");
+            "-fx-background-color: linear-gradient(to bottom right, #141c36 0%, #182040 50%, #122038 100%);");
 
-        // ── Başlık (Constantine benzeri büyük yazı) ────────────────────────────
-        Label baslik = new Label("MAYIN TARLASI");
-        baslik.setStyle(
-            "-fx-font-family: 'Constantine', 'Palatino Linotype', 'Book Antiqua', serif;" +
-            "-fx-font-size: 52px; -fx-font-weight: bold;" +
-            "-fx-text-fill: linear-gradient(to bottom, #e8dff8, #a090d0);" +
-            "-fx-effect: dropshadow(gaussian, #7060c0, 20, 0.5, 0, 3);");
-        baslik.setMaxWidth(Double.MAX_VALUE);
-        baslik.setAlignment(javafx.geometry.Pos.CENTER);
-        baslik.setPadding(new Insets(48, 0, 8, 0));
+        // ── Izgara desen overlay (arka planda şeffaf grid çizgileri) ──────────
+        javafx.scene.canvas.Canvas gridCanvas = new javafx.scene.canvas.Canvas();
+        gridCanvas.setMouseTransparent(true);
+        gridCanvas.setOpacity(0.08);
+        Runnable gridCiz = () -> {
+            double w = gridCanvas.getWidth(), h = gridCanvas.getHeight();
+            if (w <= 0 || h <= 0) return;
+            var gc = gridCanvas.getGraphicsContext2D();
+            gc.clearRect(0, 0, w, h);
+            gc.setStroke(javafx.scene.paint.Color.web("#8098ff"));
+            gc.setLineWidth(0.5);
+            for (double x = 0; x < w; x += 60) { gc.beginPath(); gc.moveTo(x, 0); gc.lineTo(x, h); gc.stroke(); }
+            for (double y = 0; y < h; y += 60) { gc.beginPath(); gc.moveTo(0, y); gc.lineTo(w, y); gc.stroke(); }
+        };
+        StackPane arkaplanKutu = new StackPane(gridCanvas);
+        arkaplanKutu.setMouseTransparent(true);
 
+        // ── İçerik kapsayıcı ──────────────────────────────────────────────────
+        VBox icerik = new VBox(0);
+        icerik.setAlignment(Pos.CENTER);
 
-        // ── 3 üst kare buton ──────────────────────────────────────────────────
-        Button klasikBtn  = kareMenuButon("⛏", "Klasik\nMayın Tarlası", "#7eb8ff", "#1a1838");
-        Button satranBtn  = kareMenuButon("♟", "Satranç\nMayın Tarlası", "#f0c040", "#1a1608");
-        Button skorBtn    = kareMenuButon("🏆", "Skor\nTablosu",        "#7eda90", "#081808");
+        // ── Başlık bölgesi ────────────────────────────────────────────────────
+        VBox baslikBolge = new VBox(0);
+        baslikBolge.setAlignment(Pos.CENTER);
+        baslikBolge.setPadding(new Insets(52, 0, 28, 0));
+
+        // Dekoratif yatay çizgi
+        HBox ustCizgi = new HBox();
+        ustCizgi.setMaxWidth(320);
+        ustCizgi.setMinHeight(1);
+        ustCizgi.setStyle("-fx-background-color: linear-gradient(to right, transparent, #6060c0, transparent);");
+
+        // MAYIN başlığı — iki satır, farklı ağırlık
+        Label mayinLabel = new Label("M A Y I N");
+        mayinLabel.setStyle(
+            "-fx-font-family: 'Courier New', monospace;" +
+            "-fx-font-size: 56px; -fx-font-weight: bold; -fx-letter-spacing: 10;" +
+            "-fx-text-fill: #e8e0ff;" +
+            "-fx-effect: dropshadow(gaussian, #5040a0, 24, 0.5, 0, 4);");
+
+        // Alt çizgi + alt yazı
+        HBox altCizgi = new HBox();
+        altCizgi.setMaxWidth(420);
+        altCizgi.setMinHeight(1);
+        altCizgi.setStyle("-fx-background-color: linear-gradient(to right, transparent, #6060c0, transparent);");
+
+        Label tarlasi = new Label("— T A R L A S I —");
+        tarlasi.setStyle(
+            "-fx-font-family: 'Courier New', monospace;" +
+            "-fx-font-size: 18px; -fx-letter-spacing: 6;" +
+            "-fx-text-fill: #8878c8;" +
+            "-fx-padding: 4 0 0 0;");
+
+        // Köşe süs numaraları
+        Label kose1 = new Label("1");
+        kose1.setStyle("-fx-font-size: 60px; -fx-text-fill: #2a3060; -fx-font-weight: bold;");
+        Label kose2 = new Label("2");
+        kose2.setStyle("-fx-font-size: 60px; -fx-text-fill: #738c88; -fx-font-weight: bold;");
+
+        // Köşe bayrak/mayın ikonları
+        Label kornMayin = new Label("💣");
+        kornMayin.setStyle("-fx-font-size: 34px; -fx-opacity: 0.3;");
+        Label kornBayrak = new Label("🚩");
+        kornBayrak.setStyle("-fx-font-size: 34px; -fx-opacity: 0.3;");
+
+        HBox baslikSatir = new HBox(0, kose1, new javafx.scene.layout.Region(), mayinLabel, new javafx.scene.layout.Region(), kose2);
+        HBox.setHgrow(baslikSatir.getChildren().get(1), javafx.scene.layout.Priority.ALWAYS);
+        HBox.setHgrow(baslikSatir.getChildren().get(3), javafx.scene.layout.Priority.ALWAYS);
+        baslikSatir.setAlignment(Pos.CENTER);
+        baslikSatir.setMaxWidth(Double.MAX_VALUE);
+        baslikSatir.setPadding(new Insets(0, 40, 0, 40));
+
+        baslikBolge.getChildren().addAll(ustCizgi, baslikSatir, tarlasi, altCizgi);
+
+        // ── 3 ana kart (KLASİK / ÖZEL OYUN / SKOR) ───────────────────────────
+        Button klasikBtn = yeniMenuButon("⚑", "KLASİK", "MAYIN TARLASI", "#4a7bff", "#1a1e3a");
+        Button ozelBtn   = yeniMenuButon("♟", "SATRANÇ", "TARLASI", "#9060e0", "#1e1530");
+        Button skorBtn   = yeniMenuButon("⌖", "SKOR", "TABLOSU", "#22aa55", "#0a1e12");
 
         klasikBtn.setOnAction(e -> { sesCal(sesButon); leblebModu = false; satranModu = false; klasikOyunuBaslat(); });
-        satranBtn.setOnAction(e -> { sesCal(sesButon); leblebModu = false; satranModu = true;  satranOyunuBaslat(); });
+        ozelBtn.setOnAction(e   -> { sesCal(sesButon); leblebModu = false; satranModu = true;  satranOyunuBaslat(); });
         skorBtn.setOnAction(e   -> { sesCal(sesButon); skorTablosunuGoster(); });
 
 
-        // ── Alt merkez kare buton (Leblebi — gizli) ───────────────────────────
-        Button leblebBtn = kareMenuButon("🫘", "Mehmet Emmi'nin\nLeblebi Tarlası", "#e8b840", "#251200");
+
+        // ── Leblebi gizli easter egg butonu (sadece açıldıktan sonra görünür) ─
+        Button leblebBtn = yeniMenuButon("🫘", "Mehmet Emmi\'nin", "LEBLEBİ TARLASI", "#e8b840", "#251800");
+        leblebBtn.setId("leblebBtn");
         leblebBtn.setVisible(leblebAcildi);
         leblebBtn.setManaged(leblebAcildi);
-        leblebBtn.setId("leblebBtn");
+
         leblebBtn.setOnAction(e -> {
             sesCal(sesButon);
             leblebModu = true; satranModu = false;
@@ -276,21 +339,85 @@ public class MinesweeperApp extends Application {
             toplamKargaKullanim = 0; toplamIlacKullanim = 0;
             leblebOyunuBaslat();
         });
-        HBox ustSira = new HBox(20, klasikBtn, satranBtn, leblebBtn);
-        ustSira.setAlignment(Pos.CENTER);
-        ustSira.setPadding(new Insets(0, 40, 16, 40));
 
-        HBox altSira = new HBox(skorBtn);
-        altSira.setAlignment(Pos.CENTER);
-        altSira.setPadding(new Insets(0, 40, 40, 40));
+        HBox kartlar = new HBox(16, klasikBtn, ozelBtn, leblebBtn);
+        kartlar.setAlignment(Pos.CENTER);
+        kartlar.setPadding(new Insets(0, 48, 14, 48));
+
+        HBox skorSatir = new HBox(skorBtn);
+        skorSatir.setAlignment(Pos.CENTER);
+        skorSatir.setPadding(new Insets(0, 48, 0, 48));
+        
+        
 
         Label easterEggEtiketi = new Label(leblebAcildi ? "🫘 Mehmet Emmi'nin Leblebi Tarlası Modu Açık!" : "");
         easterEggEtiketi.setId("easterEggEtiket");
-        easterEggEtiketi.setStyle("-fx-font-size: 13px; -fx-text-fill: #c89a2a; -fx-font-weight: bold;");
+        easterEggEtiketi.setStyle("-fx-font-size: 12px; -fx-text-fill: #c89a2a; -fx-font-weight: bold; -fx-padding: 6 0 0 0;");
         easterEggEtiketi.setAlignment(Pos.CENTER);
         easterEggEtiketi.setMaxWidth(Double.MAX_VALUE);
 
-        kok.getChildren().addAll(baslik, ustSira, altSira, easterEggEtiketi);
+        icerik.getChildren().addAll(baslikBolge, kartlar, skorSatir, easterEggEtiketi);
+
+        // ── Alt bilgi çubuğu ──────────────────────────────────────────────────
+        HBox altBar = new HBox(12);
+        altBar.setAlignment(Pos.CENTER);
+        altBar.setPadding(new Insets(10, 20, 12, 20));
+        altBar.setStyle("-fx-background-color: rgba(10,14,30,0.85); -fx-border-color: #1a2040; -fx-border-width: 1 0 0 0;");
+
+        // Sol: Nasıl Oynanır? butonu
+        Button nasılBtn = new Button();
+        Label nasılIkon = new Label("?");
+        nasılIkon.setStyle("-fx-font-size: 13px; -fx-text-fill: #8888aa; -fx-background-color: #1e2040; -fx-background-radius: 50%; -fx-min-width: 22; -fx-min-height: 22; -fx-alignment: center;");
+        Label nasılYazi = new Label("Nasıl Oynanır?");
+        nasılYazi.setStyle("-fx-font-size: 13px; -fx-text-fill: #8888aa;");
+        HBox nasılKutu = new HBox(6, nasılIkon, nasılYazi);
+        nasılKutu.setAlignment(Pos.CENTER_LEFT);
+        nasılBtn.setGraphic(nasılKutu);
+        nasılBtn.setStyle(
+            "-fx-background-color: transparent; -fx-border-color: #2a3060; -fx-border-width: 1;" +
+            "-fx-border-radius: 20; -fx-background-radius: 20; -fx-cursor: hand; -fx-padding: 6 16;");
+        nasılBtn.setOnMouseEntered(e -> nasılBtn.setStyle(nasılBtn.getStyle().replace("transparent", "#1a2040")));
+        nasılBtn.setOnMouseExited(e  -> nasılBtn.setStyle(nasılBtn.getStyle().replace("#1a2040", "transparent")));
+        nasılBtn.setOnAction(e -> { sesCal(sesButon); nasılOynanirGoster(); });
+
+        // Orta: bilgi yazısı
+        Label bilgiIcon = new Label("ⓘ");
+        bilgiIcon.setStyle("-fx-font-size: 14px; -fx-text-fill: #5060a0;");
+        Label bilgiYazi = new Label("Mayın tarlasına hoş geldiniz, dikkatli olun!");
+        bilgiYazi.setStyle("-fx-font-size: 13px; -fx-text-fill: #6878a0;");
+        HBox bilgiKutu = new HBox(8, bilgiIcon, bilgiYazi);
+        bilgiKutu.setAlignment(Pos.CENTER);
+        bilgiKutu.setPadding(new Insets(6, 16, 6, 16));
+        bilgiKutu.setStyle("-fx-background-color: rgba(20,28,60,0.7); -fx-background-radius: 20;");
+        HBox.setHgrow(bilgiKutu, javafx.scene.layout.Priority.ALWAYS);
+
+        // Sağ: Çıkış butonu
+        Button cikisBtn = new Button();
+        Label cikisIkon = new Label("⏻");
+        cikisIkon.setStyle("-fx-font-size: 14px; -fx-text-fill: #8888aa;");
+        Label cikisYazi = new Label("Çıkış");
+        cikisYazi.setStyle("-fx-font-size: 13px; -fx-text-fill: #8888aa;");
+        HBox cikisKutu = new HBox(6, cikisIkon, cikisYazi);
+        cikisKutu.setAlignment(Pos.CENTER_RIGHT);
+        cikisBtn.setGraphic(cikisKutu);
+        cikisBtn.setStyle(
+            "-fx-background-color: transparent; -fx-border-color: #2a3060; -fx-border-width: 1;" +
+            "-fx-border-radius: 20; -fx-background-radius: 20; -fx-cursor: hand; -fx-padding: 6 16;");
+        cikisBtn.setOnMouseEntered(e -> cikisBtn.setStyle(cikisBtn.getStyle().replace("transparent", "#1a2040")));
+        cikisBtn.setOnMouseExited(e  -> cikisBtn.setStyle(cikisBtn.getStyle().replace("#1a2040", "transparent")));
+        cikisBtn.setOnAction(e -> javafx.application.Platform.exit());
+
+        altBar.getChildren().addAll(nasılBtn, bilgiKutu, cikisBtn);
+
+        // ── Birleştir ─────────────────────────────────────────────────────────
+        StackPane merkezStack = new StackPane(arkaplanKutu, icerik);
+        StackPane.setAlignment(icerik, Pos.CENTER);
+        kok.setCenter(merkezStack);
+        kok.setBottom(altBar);
+
+        // Canvas boyutunu StackPane'e bağla
+        arkaplanKutu.widthProperty().addListener((o,ov,nv) -> { gridCanvas.setWidth(nv.doubleValue()); gridCiz.run(); });
+        arkaplanKutu.heightProperty().addListener((o,ov,nv) -> { gridCanvas.setHeight(nv.doubleValue()); gridCiz.run(); });
 
         StackPane kokDuzenleyici = new StackPane(kok);
         kokDuzenleyici.setId("menuRoot");
@@ -306,7 +433,7 @@ public class MinesweeperApp extends Application {
                 if (basiliKodBuffer.toString().equals(EASTER_EGG_KOD)) {
                     leblebAcildi = true;
                     basiliKodBuffer.setLength(0);
-                    easterEggTetikle(kok, leblebBtn, easterEggEtiketi);
+                    easterEggTetikleYeni(kok, leblebBtn, easterEggEtiketi);
                 }
             }
         });
@@ -315,57 +442,161 @@ public class MinesweeperApp extends Application {
         rootWrapper.getChildren().setAll(kokDuzenleyici);
     }
 
-    /** Kare menü butonu — ikon + iki satır yazı */
-    private Button kareMenuButon(String ikon, String etiket, String vurguRenk, String yazıArka) {
-        Label ikonLbl = new Label(ikon);
-        ikonLbl.setStyle("-fx-font-size: 36px;");
+    /**
+     * Yeni tasarım menü butonu — ikon (sembol), büyük başlık, küçük alt başlık.
+     * Görseldeki kart tasarımını yansıtır: koyu arka plan, renkli alt kenarlık, hover glow.
+     */
+    private Button yeniMenuButon(String sembol, String baslik, String altBaslik, String vurguRenk, String arkaRenk) {
+        Label sembolLbl = new Label(sembol);
+        sembolLbl.setStyle("-fx-font-size: 38px; -fx-text-fill: " + vurguRenk + ";" +
+            "-fx-effect: dropshadow(gaussian, " + vurguRenk + ", 12, 0.4, 0, 0);");
 
-        Label etiketLbl = new Label(etiket);
-        etiketLbl.setStyle(
-            "-fx-font-size: 13px; -fx-font-weight: bold;" +
-            "-fx-text-fill: " + vurguRenk + ";" +
-            "-fx-text-alignment: center;");
-        etiketLbl.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
-        etiketLbl.setWrapText(true);
+        Label baslikLbl = new Label(baslik);
+        baslikLbl.setStyle(
+            "-fx-font-size: 15px; -fx-font-weight: bold; -fx-letter-spacing: 2;" +
+            "-fx-text-fill: #d0cce8; -fx-text-alignment: center;");
+        baslikLbl.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
 
-        VBox kutu = new VBox(8, ikonLbl, etiketLbl);
+        Label altBaslikLbl = new Label(altBaslik);
+        altBaslikLbl.setStyle(
+            "-fx-font-size: 11px; -fx-letter-spacing: 1;" +
+            "-fx-text-fill: " + vurguRenk + "; -fx-text-alignment: center;");
+        altBaslikLbl.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
+
+        VBox kutu = new VBox(8, sembolLbl, baslikLbl, altBaslikLbl);
         kutu.setAlignment(Pos.CENTER);
 
         Button btn = new Button();
         btn.setGraphic(kutu);
-        btn.setPrefSize(170, 150);
-        btn.setMinSize(150, 130);
-        btn.setStyle(
-            "-fx-background-color: linear-gradient(to bottom right, #1e1c34, #16142a);" +
-            "-fx-border-color: " + vurguRenk + ";" +
-            "-fx-border-width: 2;" +
-            "-fx-background-radius: 16; -fx-border-radius: 16;" +
-            "-fx-cursor: hand;" +
-            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 10, 0, 0, 4);");
+        btn.setPrefSize(220, 185);
+        btn.setMinSize(190, 160);
 
-        ScaleTransition stIn  = new ScaleTransition(Duration.millis(140), btn); stIn.setToX(1.06);  stIn.setToY(1.06);
+        String normalStil =
+            "-fx-background-color: linear-gradient(to bottom right, " + arkaRenk + ", #0e0c20);" +
+            "-fx-border-color: #252840 #252840 " + vurguRenk + " #252840;" +
+            "-fx-border-width: 1 1 3 1;" +
+            "-fx-background-radius: 14; -fx-border-radius: 14;" +
+            "-fx-cursor: hand;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.7), 12, 0, 0, 5);";
+
+        String hoverStil =
+            "-fx-background-color: linear-gradient(to bottom right, " + arkaRenk + "cc, #12102acc);" +
+            "-fx-border-color: " + vurguRenk + " " + vurguRenk + " " + vurguRenk + " " + vurguRenk + ";" +
+            "-fx-border-width: 1;" +
+            "-fx-background-radius: 14; -fx-border-radius: 14;" +
+            "-fx-cursor: hand;" +
+            "-fx-effect: dropshadow(gaussian, " + vurguRenk + ", 20, 0.35, 0, 0);";
+
+        btn.setStyle(normalStil);
+        ScaleTransition stIn  = new ScaleTransition(Duration.millis(140), btn); stIn.setToX(1.05);  stIn.setToY(1.05);
         ScaleTransition stOut = new ScaleTransition(Duration.millis(140), btn); stOut.setToX(1.0); stOut.setToY(1.0);
-        btn.setOnMouseEntered(e -> {
-            btn.setStyle(
-                "-fx-background-color: linear-gradient(to bottom right, #2a2848, #1e1c38);" +
-                "-fx-border-color: " + vurguRenk + ";" +
-                "-fx-border-width: 2.5;" +
-                "-fx-background-radius: 16; -fx-border-radius: 16;" +
-                "-fx-cursor: hand;" +
-                "-fx-effect: dropshadow(gaussian, " + vurguRenk + ", 16, 0.4, 0, 0);");
-            stOut.stop(); stIn.play();
-        });
-        btn.setOnMouseExited(e -> {
-            btn.setStyle(
-                "-fx-background-color: linear-gradient(to bottom right, #1e1c34, #16142a);" +
-                "-fx-border-color: " + vurguRenk + ";" +
-                "-fx-border-width: 2;" +
-                "-fx-background-radius: 16; -fx-border-radius: 16;" +
-                "-fx-cursor: hand;" +
-                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 10, 0, 0, 4);");
-            stIn.stop(); stOut.play();
-        });
+        btn.setOnMouseEntered(e -> { btn.setStyle(hoverStil); stOut.stop(); stIn.play(); });
+        btn.setOnMouseExited(e  -> { btn.setStyle(normalStil); stIn.stop(); stOut.play(); });
         return btn;
+    }
+
+    /** Eski imza korunuyor — geriye dönük uyumluluk için. Yeni kod yeniMenuButon() kullanır. */
+    private Button kareMenuButon(String ikon, String etiket, String vurguRenk, String yazıArka) {
+        String[] satirlar = etiket.split("\n");
+        String b = satirlar.length > 0 ? satirlar[0] : etiket;
+        String a = satirlar.length > 1 ? satirlar[1] : "";
+        return yeniMenuButon(ikon, b, a, vurguRenk, yazıArka);
+    }
+
+    /** Easter egg tetiklendiğinde leblebi butonunu leblebi moduna çevirir. */
+    private void easterEggTetikleYeni(javafx.scene.layout.Pane kok, Button leblebBtn, Label etiket) {
+        // Önce aynı flash + shake animasyonu
+        TranslateTransition sarsinti = new TranslateTransition(Duration.millis(60), kok);
+        sarsinti.setByX(12); sarsinti.setCycleCount(8); sarsinti.setAutoReverse(true);
+        Timeline flash = new Timeline(
+            new KeyFrame(Duration.millis(0),   e -> kok.setStyle(kok.getStyle() + "-fx-background-color:#5c3a00;")),
+            new KeyFrame(Duration.millis(200), e -> kok.setStyle(kok.getStyle())),
+            new KeyFrame(Duration.millis(400), e -> kok.setStyle(kok.getStyle() + "-fx-background-color:#3d2800;")),
+            new KeyFrame(Duration.millis(600), e -> kok.setStyle(kok.getStyle())));
+        sarsinti.play(); flash.play();
+        etiket.setText("🫘 Mehmet Emmi'nin Leblebi Tarlası Modu Açıldı!");
+
+        // Leblebi butonu grafiğini güncelle ve görünür yap
+        leblebBtn.setVisible(true);
+        leblebBtn.setManaged(true);
+        Label iL = new Label("🫘"); iL.setStyle("-fx-font-size: 32px;");
+        Label t1 = new Label("LEBLEBİ TARLASI"); t1.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #e8b840; -fx-text-alignment: center;");
+        Label t2 = new Label("Mehmet Emmi'nin"); t2.setStyle("-fx-font-size: 11px; -fx-text-fill: #a07820; -fx-text-alignment: center;");
+        VBox lb = new VBox(6, iL, t1, t2); lb.setAlignment(Pos.CENTER);
+        leblebBtn.setGraphic(lb);
+        leblebBtn.setStyle(
+            "-fx-background-color: linear-gradient(to bottom right, #251800, #3a2000);" +
+            "-fx-border-color: #252840 #252840 #e8b840 #252840;" +
+            "-fx-border-width: 1 1 3 1;" +
+            "-fx-background-radius: 14; -fx-border-radius: 14;" +
+            "-fx-cursor: hand;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.7), 12, 0, 0, 5);");
+
+        if (kok instanceof StackPane root) {
+            VBox overlay = new VBox(20);
+            overlay.setAlignment(Pos.CENTER);
+            overlay.setStyle(
+                "-fx-background-color: radial-gradient(center 50% 50%, radius 70%, rgba(200, 154, 42, 0.9), rgba(61, 40, 0, 0.95));");
+            Label unlem = new Label("🌟 ALTIN TARLA AÇILDI! 🌟");
+            unlem.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #fffbe6; -fx-effect: dropshadow(gaussian, #c89a2a, 15, 0.5, 0, 0);");
+            Label msg = new Label("Burası bereketli topraklardır evlat.\nBurada leblebi eker, yılan biçersin.\nAltın leblebiyi bulursan yaşadın!");
+            msg.setStyle("-fx-font-size: 16px; -fx-text-fill: #f5e6b0; -fx-text-alignment: center;");
+            msg.setWrapText(true); msg.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
+            Button tamamBtn = new Button("Anladım Emmi");
+            tamamBtn.setStyle("-fx-background-color: #f0c040; -fx-text-fill: #3d2800; -fx-font-size: 16px; -fx-font-weight: bold; -fx-background-radius: 8; -fx-padding: 10 20; -fx-cursor: hand;");
+            overlay.getChildren().addAll(unlem, msg, tamamBtn);
+            root.getChildren().add(overlay);
+            ScaleTransition st = new ScaleTransition(Duration.millis(500), overlay);
+            st.setFromX(0.5); st.setFromY(0.5); st.setToX(1.0); st.setToY(1.0);
+            st.setInterpolator(javafx.animation.Interpolator.EASE_OUT);
+            FadeTransition ft = new FadeTransition(Duration.millis(500), overlay);
+            ft.setFromValue(0); ft.setToValue(1);
+            new ParallelTransition(st, ft).play();
+            tamamBtn.setOnAction(e -> {
+                FadeTransition out = new FadeTransition(Duration.millis(300), overlay);
+                out.setToValue(0);
+                out.setOnFinished(ev -> root.getChildren().remove(overlay));
+                out.play();
+            });
+            tamamBtn.requestFocus();
+        }
+    }
+
+    /** Nasıl oynanır diyalogu — menü altındaki butondan açılır. */
+    private void nasılOynanirGoster() {
+        javafx.stage.Stage d = new javafx.stage.Stage();
+        d.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+        d.initOwner(pencere);
+        d.setTitle("Nasıl Oynanır?");
+        d.setResizable(false);
+        String arka = "#12111f", yazi = "#c0b8e0", vurgu = "#7eb8ff";
+        VBox panel = new VBox(12);
+        panel.setPadding(new Insets(24)); panel.setStyle("-fx-background-color:" + arka + ";");
+        Label baslik = new Label("Mayın Tarlası — Nasıl Oynanır?");
+        baslik.setStyle("-fx-font-size:16px; -fx-font-weight:bold; -fx-text-fill:" + vurgu + ";");
+        String[][] kurallar = {
+            {"Sol Tık",   "Hücreyi açar."},
+            {"Sağ Tık",   "Bayrak diker / kaldırır."},
+            {"Sayılar",   "Komşu mayın / taş sayısını gösterir."},
+            {"Klasik",    "Tüm mayınsız kareleri açarak kazan."},
+            {"Satranç",   "Taşlar her hamlede hareket eder!"},
+            {"Leblebi",   "Can sistemi + market ile oyna (gizli mod)."},
+        };
+        GridPane grid = new GridPane(); grid.setHgap(12); grid.setVgap(8);
+        for (int i=0; i<kurallar.length; i++) {
+            Label k = new Label(kurallar[i][0]); k.setStyle("-fx-font-size:13px; -fx-font-weight:bold; -fx-text-fill:" + vurgu + "; -fx-min-width:80;");
+            Label v = new Label(kurallar[i][1]); v.setStyle("-fx-font-size:13px; -fx-text-fill:" + yazi + ";");
+            grid.add(k,0,i); grid.add(v,1,i);
+        }
+        Button kapat = new Button("Tamam");
+        kapat.setStyle("-fx-background-color:#7eb8ff; -fx-text-fill:#12111f; -fx-font-weight:bold; -fx-background-radius:8; -fx-cursor:hand; -fx-padding:8 20;");
+        kapat.setOnAction(e -> d.close());
+        HBox btnBox = new HBox(kapat); btnBox.setAlignment(Pos.CENTER);
+        panel.getChildren().addAll(baslik, new Separator(), grid, btnBox);
+        javafx.scene.Scene s = new javafx.scene.Scene(panel);
+        globalCssUygula(s);
+        d.setScene(s);
+        d.showAndWait();
     }
 
        // ── Easter Egg ────────────────────────────────────────────────────────────
