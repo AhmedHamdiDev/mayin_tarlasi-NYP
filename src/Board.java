@@ -259,7 +259,7 @@ public class Board {
 
         ilkTiklamaKontrol(satir, sutun);
 
-        int yokEdilenSolucan = 0;
+        int yokEdilenYilan = 0;
 
         java.util.List<int[]> etkiAlani = new java.util.ArrayList<>();
         if (cap == 100) {
@@ -283,7 +283,7 @@ public class Board {
             if (sinirIcindeMi(ys, yu) && izgara[ys][yu].isMayinMi()) {
                 izgara[ys][yu].setMayin(false);
                 toplamMayin--;
-                yokEdilenSolucan++;
+                yokEdilenYilan++;
                 kapaliGuvenliHucre++; // We destroyed a mine, so it became a safe closed cell.
             }
         }
@@ -303,17 +303,21 @@ public class Board {
             }
         }
 
-        return yokEdilenSolucan;
+        return yokEdilenYilan;
     }
 
     /**
      * Karga Upgrade (Level 1: 1 random, Level 2: 3 random, Level 3: closest)
+     * FIX: flagged cells are excluded — the crow should never highlight a cell
+     * the player has already marked, and including them caused the ⚠ to
+     * reappear when the player later removed the flag.
      */
     public java.util.List<int[]> kargaGorus(int level, int lastR, int lastC) {
         java.util.List<int[]> mayinlar = new java.util.ArrayList<>();
         for (int s = 0; s < satirSayisi; s++) {
             for (int u = 0; u < sutunSayisi; u++) {
-                if (izgara[s][u].isMayinMi() && !izgara[s][u].isAcildiMi()) {
+                if (izgara[s][u].isMayinMi() && !izgara[s][u].isAcildiMi()
+                        && !izgara[s][u].isIsaretlendi()) { // FIX: skip flagged
                     mayinlar.add(new int[]{s, u});
                 }
             }
