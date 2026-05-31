@@ -123,7 +123,7 @@ public class GameController {
                 ekranSarsintisi();
                 if (s.merkezIcerikKutusu != null) kirmiziFlasBas(s.merkezIcerikKutusu);
             } else {
-                assets.play(assets.sesKazma);
+                assets.playKazma();
             }
             s.maynSayaciEtiketi.setText("♟ " + s.chessBoardMode.getMineCount());
             arayuzuGuncelle();
@@ -139,7 +139,7 @@ public class GameController {
                 s.leblebiBoardMode.hucreAc(sr, su);
                 refreshScoreLabels();
                 s.leblebiBoardMode.kazanmaKontrol();
-                assets.play(assets.sesKazma);
+                assets.playKazma();
                 arayuzuGuncelle();
                 return;
             }
@@ -162,7 +162,7 @@ public class GameController {
                     builder.diyalogGoster(s.leblebiBoardMode.getAktifDiyalog());
                 }
             } else {
-                assets.play(assets.sesKazma);
+                assets.playKazma();
                 refreshScoreLabels();
             }
             arayuzuGuncelle();
@@ -178,7 +178,7 @@ public class GameController {
             if (hucre.isIsaretlendi()) return;
             boolean wasMine = hucre.isMayinMi();
             s.klasikBoardMode.hucreAc(sr, su);
-            assets.play(wasMine ? assets.sesPatlama : assets.sesKazma);
+            if (wasMine) assets.play(assets.sesPatlama); else assets.playKazma();
             arayuzuGuncelle();
         }
     }
